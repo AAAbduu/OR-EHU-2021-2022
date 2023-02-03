@@ -1,0 +1,322 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+  
+# Operations Research. Practical test.
+# Ordinary Call - 31st of May 2021
+
+
+In order to do the present practical test it is necessary to have installed `lpSolveAPI` and `metaheuR` packages. With the first, we will solve linear models using the algorithms that we have seen in the initial units of the subject. With the second package, `metaheuR`, we will solve optimization problems using heuristic optimization algorithms. This practical test will account for the 20% of the overall mark in the subject. This percentage will be distributed as 5% and 15% in the `lpSolveAPI` and `metaheuR` sections, respectively. When answering the questions, in addition to the code, it is essential to give explanations. Otherwise, the question will not be answered correctly. Finally, remember that the practical test is individual, so if we find any case of copy, the protocol of the university for such cases will be applied to every students involved in the copy.
+
+# 1. Solving linear models with `lpSolveAPI`
+
+## 1.1 The linear model
+
+A factory produces 4 types of soaps with 6 different ingredients. In the table below, the ingredient amount to produce each soap type is specified.
+
+\begin{center}
+\begin{tabular}{|l|rrrrrr|}
+\hline
+      & Oil & Water & Caustic soda & Glycerin & Lemon Essence & Strawberry Essence\\
+Soaps & (ml)     &   (ml)  &    (g) &    (g)   & (ml) & (ml) \\
+\hline
+Soap 1 & 250 & 240 & 42 & 1 & 1 & 3\\
+Soap 2 & 200 & 210 & 2 & 40 & 2 & 1\\
+Soap 3 & 230 & 240 & 20 & 25 & 3 & 1\\
+Soap 4 & 180 & 200 & 10 & 35 & 1 & 3\\
+\hline
+\end{tabular}
+\end{center}
+
+The stock of ingredients per day is the following: 150000 ml oil, 160000 ml water, 12 kg caustic soda, 3 kg glycerin, 2.000 ml lemon essence and 3.000 ml strawberry essence. The profit per each bar of soap, is 10, 13, 15 and 11 units, respectively (for each soap type).
+
+Four decision variables have been defined: $x_{i}$= the number of soap bars of type $i$ to produce per day, $i=1,2,3,4$. The company accepts producing pieces of soaps ($x_{i}$ can take real numbers). We propose the next the linear model for the problem:
+
+\begin{center}
+$\begin{array}{rl}
+\mbox{max}\ z=10x_{1}+13x_{2}+15x_{3}+11x_{4} &\mbox{(Benefit)} \\
+\mbox{subject to}\hspace{4.5cm} & \\
+250x_1 + 200x_2 + 230x_3 + 180x_4  \leq 150000 & \mbox{(Oil)}\\
+240x_1 + 210x_2 + 240x_3 + 200x_4  \leq 160000& \mbox{(Water)}\\
+42x_1 + 2x_2 + 20x_3 + 10x_4  \leq 12000 & \mbox{(Caustic Soda)}\\
+x_1 + 40x_2 + 25x_3 + 35x_4  \leq  3000  & \mbox{(Glycerin)}\\
+x_1 + 2x_2 + 3x_3 + x_4  \leq 2000  & \mbox{(Lemon Essence)}\\
+3x_1 + x_2 + x_3 + 3x_4  \leq 3000  & \mbox{(Strawberry Essence)}\\
+x_{1},x_{2}, x_{3}, x_{4}\geq 0
+\end{array}$
+\end{center}
+
+
+## 1.2 Defining the linear model with `lpSolveAPI`
+
+In order to carry out the tasks in this section, we will load the `lpSolveAPI` package.
+
+```{r, eval=FALSE}
+install.packages("lpSolveAPI")
+library(lpSolveAPI)
+```
+
+The previous linear model can defined either using the functions of `lpSolveAPI` or reading it from a file. Using the functions we do it as in what follows:
+```{r, eval=FALSE}
+model.soaps <- make.lp(nrow=6, ncol=4)
+set.column(lprec=model.soaps, column=1, x=c(250, 240, 42, 1, 1, 3))
+set.column(lprec=model.soaps, column=2, x=c(200, 210, 2, 40, 2, 1))
+set.column(lprec=model.soaps, column=3, x=c(230, 240, 20, 25, 3, 1))
+set.column(lprec=model.soaps, column=4, x=c(180, 200, 10, 35, 1, 3))
+lp.control(model.soaps, sense="max")
+set.objfn(lprec=model.soaps, obj=c(10, 13, 15, 11), indices=1:4) 
+set.constr.value(lprec=model.soaps, rhs=c(150000, 160000, 12000, 3000, 2000, 3000), constraints=1:6)
+set.constr.type(model.soaps, types=c("<=", "<=", "<=", "<=", "<=", "<="), constraints=1:6)
+variables   <- c("x1","x2","x3","x4")
+constraints <- c("Oil", "Water", "Caustic soda", "Glycerin", "Lemon essence", "Strawberry essence") 
+dimnames(model.soaps) <- list(constraints, variables)
+model.soaps   
+```
+
+The other option is to create a file with the definition of the linear model (see below).
+```
+max: 10x1 + 13x2 + 15x3 + 11x4;
+Oil: 250x1 + 200x2 + 230x3 + 180x4  <= 150000;
+Water: 240x1 + 210x2 + 240x3 + 200x4  <= 160000;
+Caustic_Soda: 42x1 + 2x2 + 20x3 + 10x4  <= 12000;
+Glycerine: 1x1 + 40x2 + 25x3 + 35x4  <= 3000;
+Lemon_essence: 1x1 + 2x2 + 3x3 + 1x4  <= 2000;
+Strawberry_essence: 3x1 + 1x2 + 1x3 + 3x4  <= 3000;
+```
+Then, we can load it from the file using the `read.lp` function.
+
+```{r, eval=FALSE}
+model.soaps <- read.lp(file="model_soaps.lp", type="lp", verbose="full")
+model.soaps  
+```
+
+In the next sections, you are requested to do a number of tasks. To that end, you will be need to 1) implement some lines using functions included in the `lpSolveAPI` package, and 2) answer the questions formulated. Try to include comments to your implementation, and give long answers putting in context your answer and relating it to the theory studied in the subject.
+
+## 1.3 Solving the linear model with `lpSolveAPI`
+
+Solve the model and answer the question.
+
+```{r, eval=FALSE}
+# IMPLEMENT HERE
+
+```
+
+### Question
+
+* Which is the optimal solution? Which is the objective value of the optimal solution?
+
+```{r, eval=FALSE}
+# WRITE HERE (explain USING your own words, otherwise the explanation will not be accepted)
+
+
+
+## 1.4 Explaining the shadow prices
+
+Calculate the shadow prices and answer the questions.
+
+```{r, eval=FALSE}
+# Calculate the shadow-prices
+# IMPLEMENT HERE
+
+
+# Interpret y4^*  variable, and confirm your interpretation it by modifying the model
+# IMPLEMENT HERE
+
+```
+
+### Questions
+
+* Calculate the shadow prices.
+
+```{r, eval=FALSE}
+# WRITE ANSWER HERE.
+
+```
+
+* Interpret variable $y^*_4$ and confirm this interpretation by introducing small modifications that cause the expected changes.
+
+```{r, eval=FALSE}
+# WRITE HERE (explain USING your own words, otherwise the explanation will not be accepted)
+
+```
+
+## 1.5 Sensitivity analysis - Changes in the $\mathbf{c}$ vector
+
+Do the sensitivity analysis by performing changes in the $\mathbf{c}$ vector (see the questions below for guidance). Then, answer the questions.
+
+```{r, eval=FALSE}
+# Read the model from the file and solve it again.
+# IMPLEMENT HERE
+
+```
+
+### Questions
+
+* Which should be the profit for each bar of soap 4 to be its production profitable? 
+```{r, eval=FALSE}
+# WRITE HERE (explain USING your own words, otherwise the explanation will not be accepted)
+
+```
+
+* The prices of the soaps have changed, and now the profit for the soap 4 has increased from 11 to 20. How this change will affect the optimal solution? Answer the question and support your reasoning by introducing changes in the model (code chunk above) and showing the effects.
+
+```{r, eval=FALSE}
+# WRITE HERE (explain USING your own words, otherwise the explanation will not be accepted)
+
+```
+
+* The factory has decided not to accept pieces of soap bars in the solution. Which changes should we perform in the model to guarantee it? If we do so, which will be the algorithm used by `lpSolveAPI` for solving the problem?
+```{r, eval=FALSE}
+# WRITE HERE (explain USING your own words, otherwise the explanation will not be accepted)
+
+```
+
+# 2. Heuristic optimization with `metaheuR`
+
+In order to carry out the tasks in this section, we will load the `metaheuR` and `igraph` packages.
+Remember that these packages need to be previously installed, otherwise the practical test cannot be accomplished succesfully.
+
+```{r, eval=FALSE}
+library(metaheuR)
+# install.packages("igraph") # run this line in case "igraph" is not installed.
+library(igraph) 
+```
+
+## 2.1 Maximum Independent Set (MIS)
+
+In this practical test, with illustrative purposes, we will use the Maximum Independent Set (MIS) problem as basis to develop the requested algorithms using the `metaheuR` package. Specifically, in order to create the problem object, first we will create a random graph with 30 vertices. The aim  in this problem is to find the largest set of vertices $S$ of the graph such that any pair of vertices in $S$ do not have a connecting edge. Any solution that does not comply with the previous restriction is considered an infeasible solution.
+
+```{r,eval=FALSE}
+# Create a random graph that is going to be used as structure of the Maximum Independent Set, 
+# and create the object of the problem.
+
+# set number of nodes in the graph.
+number_nodes <- 30
+
+# create a random graph using "igraph" library.
+rnd.graph <- random.graph.game(number_nodes, p.or.m=0.3) 
+
+#create the problem object.
+# IMPLEMENT HERE
+
+```
+
+Propose a suitable representation to codify the solutions of the MIS, then create a random solution, and evaluate it. Try to visualize the proposed solution using the `plot` function to gain intuition on the problem.
+
+```{r,eval=FALSE}
+# Create an object, and evaluate it using the object in the previous code chunk
+# IMPLEMENT HERE
+
+```
+As stated previously, any two vertices in the independent set cannot be linked with an edge. If that happens, we will say that that particular solution is unfeasible. A common procedure for such cases is to correct the solutions using the utilities contained in the problem object. In the following code chunk, check whether the solution generated previously is feasible, and then use the correction method to make it feasible. Once the solution is corrected, evaluate again its objective value.
+
+```{r,eval=FALSE}
+# Correct the solution if it is not feasible.
+# IMPLEMENT HERE
+
+}
+```
+
+### Question
+
+Did the solutions (before and after correction) change? How many nodes are in the independent sets in each case?
+```{r,eval=FALSE}
+# IMPLEMENT HERE (explain USING your own words, otherwise the explanation will not be accepted)
+
+```
+
+## 2.2 Local Search
+
+In what follows, the implementation of a local search algorithm is requested. Note that local search algorithms require a number of parameters to be specified: the objective function, a neighborhood function, neighbor selection criterion, a method to validate the feasibility of solutions, the function to correct invalid solutions, are some.
+
+Use the `metaheuR` help in the right bar, and choose suitable parameters for the algorithm. Note that not every option can be applied on the MIS. As regards to the selector, the `firstImprovement` selector will be used.
+
+
+```{r,message=FALSE,eval=FALSE}
+args<-list()
+# IMPLEMENT HERE
+
+```
+
+### Questions
+
+Which neighborhood structure did you choose? Explain extensively the procedure followed to create the neighboring set of solutions.
+```{r,eval=FALSE}
+# WRITE HERE (explain USING your own words, otherwise the explanation will not be accepted)
+
+```
+
+In addition to the previous, the available resources for the optimization need to be specified. In this particular case, the algorithm will use $10^4$ function evaluations at most. 
+```{r,eval=FALSE}
+# IMPLEMENT HERE
+
+```
+
+Finally, run the local search algorithm with the requested details, and print the result and visualize the solution found.
+```{r,eval=FALSE}
+# Run the algorithm
+# IMPLEMENT HERE
+
+```
+
+### Questions
+Once implemented the previous tasks, and the algorithm run, answer the following questions giving long explanations. YES/NO answers will not be accepted.
+
+* How many vertices are in the maximum independent set found by the local search algorithm?
+```{r, eval=FALSE}
+# IMPLEMENT HERE (explain USING your own words, otherwise the explanation will not be accepted)
+
+```
+
+* Which is the search space of solutions? Are all the solutions in the search space valid? Do exist solutions that do not belong to the search space but are feasible? 
+```{r, eval=FALSE}
+# IMPLEMENT HERE (explain USING your own words, otherwise the explanation will not be accepted)
+
+```
+
+* Is the solution found optimal? What happens if we increase the availability of resources? Will the quality of the solutions improve?
+```{r, eval=FALSE}
+# IMPLEMENT HERE (explain USING your own words, otherwise the explanation will not be accepted)
+
+```
+
+# Estimating the number of local optima
+
+As studied in the lectures, our intuition suggests that if there is a small number of local optimum in the landscape, the algorithm has more chances to find the global optimum; its shape is said to be "smooth" or "flat". On the contrary, having a landscape with a lot of local optimum makes it more difficult to find the global optimum, since the algorithm will very easily get stuck in a local optimum; its shape is said to be "wrinkled" or "rugged". 
+
+In the local search algorithm you implemented in previous tasks, we chose the `firstImprovementSelector` as criterion for selecting the neighboring solution. Nevertheless, there are other such as `greedySelector` that could be equally used. In each case, the performance of the local search will differ, because the basin of attraction of the local optima change.
+
+In the following, you are requested to estimate the number of local optima of the landscapes when using `firstImprovementSelector` and `greedySelector` selectors. In the last laboratory session, we worked on a way to carry out these estimations. You will need to use $20$ initial solutions, and each search will be limited to $1000n$ evaluations.
+
+REMARK: two local optima solutions will be considered equal when the corresponding objective values are the equal.
+
+```{r, eval=FALSE}
+# IMPLEMENT HERE
+
+```
+
+## Questions:
+
+* What is the number of local optima estimated for the `firstImprovement` selector? And, for the `greedy` selector? 
+
+```{r, eval=FALSE}
+# WRITE HERE (explain USING your own words, otherwise the explanation will not be accepted)
+
+```
+
+* Which one would you say is more efficient to solve the MIS problem?
+   
+```{r, eval=FALSE}
+# WRITE HERE (explain USING your own words, otherwise the explanation will not be accepted)
+
+```
+
+* Repeat the experiment for different number of initial solutions, $k=30, 50, 100...$. Based on the new estimations which conclusions can you draw now?
+
+```{r, eval=FALSE}
+# WRITE HERE (explain USING your own words, otherwise the explanation will not be accepted)
+
+```
+

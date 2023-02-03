@@ -1,0 +1,397 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+  
+# Operations Research. Practical test.
+# Ordinary Call - 26th of May 2022
+
+In order to do the present practical test it is necessary to have installed `lpSolveAPI` and `metaheuR` packages. With the first, we will solve linear models using the algorithms that we have seen in the initial units of the subject. With the second package, `metaheuR`, we will solve optimization problems using heuristic optimization algorithms. This practical test will account for the 20% of the overall mark in the subject. This percentage will be distributed as 5% and 15% in the `lpSolveAPI` and `metaheuR` sections, respectively. When answering the questions, in addition to the code, it is essential to give explanations. Otherwise, the question will not be answered correctly. Finally, remember that the practical test is individual, so if we find any case of copy, the protocol of the university for such cases will be applied to every students involved in the copy.
+
+# 1. Solving linear models with `lpSolveAPI`
+
+## 1.1 The linear model
+
+A group of friends is going for shopping to get ready for this weekend's drinks. Not everyone likes the same mixed drinks, some people like a drink with the usual mix of rum and cola (at least 30% rum and the rest cola), but a few prefer a drink with less rum (it must be at least 10% rum).
+
+To prepare the drinks at home, the group needs to buy rum and cola. They can buy at most 3 bottles of 750 ml of rum (2250 ml) and 3 bottles of 1500 ml (4500 ml) of cola. They're looking at cheap marks and they've calculated that a rum ml costs 1 cent and a cola ml 0.2 cents. They have 30 euros and they can't spend more. The goal is to buy as many drinks as they can with that money. Can we help them to arrange the purchase?
+
+The decision variables are the following: $x_{ij}$= the number of ml of ingredient $j$ that has the mixed drink $K_i$, and $i=\{1,2\}$ and $j=\{R,C\}$. Non-integer quantities of bottles of Rum and Cola are accepted in the solution. The following linear model presents the problem:
+
+\begin{center}
+$\begin{array}{rl}
+\mbox{max}\ z=x_{1R}+x_{1C}+x_{2R}+x_{2C} & \\
+\mbox{subject to}\hspace{3cm} & \\
+x_{1R}+x_{2R}  \leq 2250 & \mbox{(Rum)}\\
+x_{1C}+x_{2C}  \leq 4500 & \mbox{(Cola)}\\
+x_{1R}+0,2x_{1C}+x_{2R}+0,2x_{2C}\leq 3000 & \mbox{(Budget)}\\
+x_{1R}  \geq 0,3(x_{1R}+x_{1C})  & \mbox{(K1 mixed drink)}\\
+x_{2R}  \geq 0,1(x_{2R}+x_{2C})  & \mbox{(K2 mixed drink)}\\
+x_{1R},x_{1C},x_{2R},x_{2C}\geq 0
+\end{array}$
+\end{center}
+
+## 1.2 Defining the linear model with `lpSolveAPI`
+
+In order to carry out the tasks in this section, we will load the `lpSolveAPI` package.
+
+```{r, eval=FALSE}
+# install.packages("lpSolveAPI")
+library(lpSolveAPI)
+```
+
+The previous linear model can defined either using the functions of `lpSolveAPI` or reading it from a file. Using the functions we do it as in what follows:
+
+```{r, eval=FALSE}
+rm(list=ls())
+model.drinks <- make.lp(nrow=5, ncol=4)
+set.column(lprec=model.drinks, column=1, x=c(1, 0, 1, 0.7, 0))
+set.column(lprec=model.drinks, column=2, x=c(0, 1, 0.2, -0.3, 0))
+set.column(lprec=model.drinks, column=3, x=c(1, 0, 1, 0, 0.9))
+set.column(lprec=model.drinks, column=4, x=c(0, 1, 0.2, 0, -0.1))
+lp.control(model.drinks, sense="max")
+set.objfn(lprec=model.drinks, obj=c(1, 1, 1, 1), indices=1:4) 
+set.constr.value(lprec=model.drinks, rhs=c(2250,4500, 3000,0,0), constraints=1:5)
+set.constr.type(model.drinks, types=c("<=", "<=", "<=", ">=", ">="), constraints=1:5)
+variables   <- c("x1R","x1C","x2R","x2C")
+constraints <- c("Rum", "Cola", "Budget", "K1-drink", "K2-drink") 
+dimnames(model.drinks) <- list(constraints, variables)
+model.drinks   
+```
+
+## 1.3 Solving the linear model with `lpSolveAPI`
+
+In this section, you are requested to do a number of tasks. To that end, you will be need to 1) implement some lines using functions included in the `lpSolveAPI` package, and 2) answer the questions formulated. Try to include comments to your implementation, and give long answers putting in context your answer and relating it to the theory studied in the subject.
+
+* (Question 1) According to the optimal solution, what is the mixture of drinks they will prepare to elaborate each of the drinks? How much will they prepare in all?
+
+```{r, eval=FALSE}
+# IMPLEMENT HERE
+
+solve(model.drinks)
+
+get.objective(model.drinks)
+
+get.variables(model.drinks)
+
+```
+
+[ANSWER QUESTION HERE] 
+
+Seems they are going to get 1600 ml of rum for the first type of mixture and 0 ml of cola (They will use the X2_C for the mixture), 
+500 ml of rum for the second type of mixture and 4500 ml of cola for all the mixtures.
+
+* (Question 2) Calculate the shadow prices.
+
+```{r, eval=FALSE}
+# IMPLEMENT HERE
+
+get.sensitivity.rhs(model.drinks)
+
+
+```
+
+[ANSWER QUESTION HERE]  
+
+duals$duals contains the shadow prices we are asked for.
+
+[1] 0.0 0.8 1.0 0.0 0.0 0.0 0.0 0.0 0.0
+
+
+
+* (Question 3) Interpret $y^*_1$ and $y^*_2$ with what you know from theory. Next, make the necessary changes in the model, in order to relate it with the theoretical reasoning you have made, that is, modify the model, and determine the use of the resources, and confirm that your conclusions were correct.
+
+```{r, eval=FALSE}
+# IMPLEMENT HERE
+set.constr.value(lprec=model.drinks, rhs=c(2251,4500, 3000,0,0), constraints=1:5) #Increment in one unit the first resource
+
+solve(model.drinks)
+
+
+
+get.objective(model.drinks)
+
+get.variables(model.drinks)
+
+
+
+#FOR Y_2
+
+set.constr.value(lprec=model.drinks, rhs=c(2250,4501, 3000,0,0), constraints=1:5) #Increment in one unit the first resource
+
+solve(model.drinks)
+
+
+
+get.objective(model.drinks)
+
+get.variables(model.drinks)
+
+
+
+```
+
+[ANSWER QUESTION HERE] 
+
+The point here for y_1 is that the shadow price is 0, so no matter if we increase or decrease the resource we are using, it will not affect the objective value we will get evaluating the function. That we can see in the first chunk of the execution of the code. We can see the z value remains the same.
+
+For y_2 we can see it's shadow price is 0.8, which theoretically tells us that incrementing the resource within the valid range of it, should increase also the z value from the objective function.That we can see in the second chunk of the execution of the code. We observe the z value has incresed 0.8.
+
+* (Question 4) Calculate the range of values for Cola so as not to change the optimal basis.
+
+```{r, eval=FALSE}
+# IMPLEMENT HERE
+
+duals <- get.sensitivity.rhs(model.drinks)
+
+duals$dualsfrom[2] duals$dualstill[2]
+
+duals$dualsfrom[4] duals$dualstill[4]
+
+
+```
+
+[ANSWER QUESTION HERE] 
+
+
+duals$dualsfrom[2]-duals$dualstill[2]
+
+duals$dualsfrom[4]- duals$dualstill[4]
+
+That is the range for the variables that refer to cola, for not changing the optimal basis we have.
+
+
+
+* (Question 5) If they tell us we can buy double the amount of Cola ml, how will the optimal solution change? What if we can buy a triple? Why is this happening? Are all the friends happy?
+
+```{r, eval=FALSE}
+# IMPLEMENT HERE
+
+set.constr.value(lprec=model.drinks, rhs=c(2250,4500, 3000,0,0), constraints=1:5) #Normal problem
+
+solve(model.drinks)
+
+
+get.objective(model.drinks)
+
+get.variables(model.drinks)
+
+duals <- get.sensitivity.rhs(model.drinks)
+
+
+set.constr.value(lprec=model.drinks, rhs=c(2250,4500*2, 3000,0,0), constraints=1:5) #double cola problem
+
+solve(model.drinks)
+
+
+get.objective(model.drinks)
+
+get.variables(model.drinks)
+
+duals_double <- get.sensitivity.rhs(model.drinks)
+
+
+set.constr.value(lprec=model.drinks, rhs=c(2250,4500*3, 3000,0,0), constraints=1:5) #triple cola problem
+
+solve(model.drinks)
+
+
+get.objective(model.drinks)
+
+get.variables(model.drinks)
+
+duals_triple <- get.sensitivity.rhs(model.drinks)
+
+
+```
+
+[ANSWER QUESTION HERE] 
+
+The quantity for the first mixture is decreasing, the friends that drink the first kind of mixture will not be happy.
+
+
+This is happening because we are changing the basis everytime we get out of the range the function get.sensitivity.rhs(model.drinks) is telling us to stay in. Once we establish the right hand side of the problem, we need to solve again the problem, once we have established a resource out of the previous range (indicated optimal by get.sensitivity.rhs(model.drinks)), the basis will change, the solution will change.
+
+# 2. Heuristic optimization with `metaheuR`
+
+In order to carry out the tasks in this section, we will load the `metaheuR` and `igraph` packages.
+Remember that these packages need to be previously installed, otherwise the practical test cannot be accomplished successfully.
+
+```{r, eval=FALSE}
+library(metaheuR)
+```
+
+## 2.1 Pairwise preference ranking
+
+Read the statement below, and do the requested tasks:
+
+Some car manufacturers aim to know the preferences of the public opinion about their products. Particularly, they aim to know which is the ranking of preference of a number of car models that the company produces. To that end, the car company has hired a survey company that has collected pairwise opinions of a sample of people in a matrix $B=[b_{ij}]_{n\times n}$. Each position $b_{ij}$ in the matrix indicates the amount of people that prefers car model $i$ to car model $j$. 
+
+In order to find the ranking that best approximates the pairwise preferences, the goal is to find the simultaneous permutation of rows and columns of matrix $B$ such that sum of the entries above the main diagonal is maximized. In what follows, an small example of the data collected in matrix $B$ is described (in the left). In the right, we see a simultaneous permutation reordering of rows and columns.
+
+\begin{center}
+$\begin{array}{c|rrrr|r|rrrr|}
+
+\multicolumn{1}{c}{} & 1 & 2 & 3 & \multicolumn{1}{c}{4}& 
+       \multicolumn{1}{c}{\hspace{2cm} } & 3 & 2 & 1 & \multicolumn{1}{c}{4} \\
+\cline{2-5} \cline{7-10}
+1 & 0 & 2 & 1 & 3 &   3 & 0 & 3 & 2 & 5\\
+2 & 4 & 0 & 1 & 5 &   2 & 1 & 0 & 4 & 5\\
+3 & 2 & 3 & 0 & 5 &   1 & 1 & 2 & 0 & 3\\
+4 & 1 & 2 & 1 & 0 &   4 & 1 & 2 & 1 & 0\\
+\cline{2-5} \cline{7-10}
+\end{array}$
+\end{center}
+
+Note: The implementation in `metaheuR` does not maximize the sum of values in the upper triangle. Instead, it minimizes the sum of values under the diagonal. In fact, it is equivalent, but, be careful: when you compare two solutions, the optimum is the minimum for `metaheuR`.
+
+## Formulating the problem in RStudio
+First of all, we need to define the problem. For the purpose of the current test, we will use the data in the file *N-be75eec_30* that can be found in eGela platform. It is a text file, you can open it using any text editor. 
+
+In the following the code lines necessary to read the file from RStudio are given.
+
+```{r, eval=FALSE}
+# Read the data from file N-be75eec.
+parameters <- scan('N-be75eec_30.txt')
+problem.size<-sqrt(length(parameters))
+problem.size
+weights.matrix <- matrix(parameters, ncol = problem.size, byrow = TRUE)
+weights.matrix
+```
+
+`metaheuR` includes a number of problem objects, find the suitable one to describe the problem presented, and by using the size of the problem and the matrix of weights above, create that object. Then create a random solution that fits a codification that permits to represent a ranking of pairwise comparisons, and evaluate it using the problem object.
+
+```{r, eval=FALSE}
+# IMPLEMENT HERE 
+
+lop <- lopProblem(weights.matrix)
+
+initial_random_sol <- randomPermutation(problem.size)
+
+lop$evaluate(initial_random_sol)
+
+
+
+
+
+
+```
+
+## 2.2 Local Search
+
+In what follows, the implementation of a local search algorithm is requested. Note that local search algorithms require a number of parameters to be specified: the objective function, a neighborhood function, neighbor selection criterion, a method to validate the feasibility of solutions, the function to correct invalid solutions, are some.
+
+Use the `metaheuR` help in the right bar, and choose suitable parameters for the algorithm. Note that not every option can be applied on the problem you have chosen. As regards to the selector, the `firstImprovement` selector will be used.
+
+```{r,message=FALSE,eval=FALSE}
+args<-list()
+# IMPLEMENT HERE
+
+args$evaluate <- lop$evaluate
+args$initial <- initial_random_sol
+args$neighborhood <- swapNeighborhood(initial_random_sol)
+args$selector <- greedySelector
+
+do.call(basicLocalSearch, args)
+
+
+
+```
+
+### Questions
+
+Which neighborhood structure did you choose? Explain extensively the procedure followed to create the neighboring set of solutions.
+```{r,eval=FALSE}
+# WRITE HERE (explain USING your own words, otherwise the explanation will not be accepted)
+
+I used the swapNeighborhood(), we enter the problem with an initial non-optimal solution, and we change some of the values we have in the solution by swaping their positions, until we get the optimal solution.
+
+```
+
+In addition to the previous, the available resources for the optimization need to be specified. In this particular case, the algorithm will use $10^4$ function evaluations at most. 
+```{r,eval=FALSE}
+# IMPLEMENT HERE
+
+args$resources <- cResource(evaluations = 10**4)
+
+```
+
+Finally, run the local search algorithm with the requested details, and print the result and visualize the solution found.
+```{r,eval=FALSE}
+# Run the algorithm
+# IMPLEMENT HERE
+
+do.call(basicLocalSearch, args)
+
+```
+
+### Questions
+Once implemented the previous tasks, and the algorithm run, answer the following questions giving long explanations. YES/NO answers will not be accepted.
+
+* Which is the ranking of 30 cars obtained by the local search algorithm? And the objective value?
+
+```{r, eval=FALSE}
+# WRITE HERE (explain USING your own words, otherwise the explanation will not be accepted)
+
+
+The value obtained is 70746
+
+
+```
+
+* Which is the search space of solutions? Are all the solutions in the search space valid? Do exist solutions that do not belong to the search space but are feasible? 
+```{r, eval=FALSE}
+# WRITE HERE (explain USING your own words, otherwise the explanation will not be accepted)
+
+ALL are valid since we art working wiuth permutations and ouer space of solutions guarantee some properties like no repeated values appear, so yes, all solutions are valid.
+
+```
+
+* Is the solution found optimal? What happens if we increase the availability of resources? Will the quality of the solutions improve?
+```{r, eval=FALSE}
+# WRITE HERE (explain USING your own words, otherwise the explanation will not be accepted)
+
+
+Yes, the solution found is optimal, nothing will happen increasing thr resources, the algorithm shall stop once optimality has been reached.,
+
+```
+
+# Estimating the number of local optima
+
+As studied in the lectures, our intuition suggests that if there is a small number of local optimum in the landscape, the algorithm has more chances to find the global optimum; its shape is said to be "smooth" or "flat". On the contrary, having a landscape with a lot of local optimum makes it more difficult to find the global optimum, since the algorithm will very easily get stuck in a local optimum; its shape is said to be "wrinkled" or "rugged". 
+
+In the local search algorithm you implemented in previous tasks, you chose a specific neighborhood function to search for solutions. Nevertheless, there are other neighborhood functions that can be also applied. In each case, the performance of the local search will differ, because the structure of the landscape can change significantly.
+
+In the following, you are requested to estimate the number of local optima of the landscapes when using two different neighborhood structures that are applicable to the current problem. In the last laboratory session, we worked on a way to carry out these estimations. You will need to use $5$ initial solutions, and each search will be limited to $1000n$ evaluations.
+
+REMARK: two local optima solutions will be considered equal when the corresponding objective values are the equal.
+
+```{r, eval=FALSE}
+# IMPLEMENT HERE
+
+```
+
+## Questions:
+
+* What is the number of local optima estimated for each of the neighborhood functions? 
+
+```{r, eval=FALSE}
+# WRITE HERE (explain USING your own words, otherwise the explanation will not be accepted)
+
+```
+
+* Which one would you say is more efficient to solve the current problem?
+   
+```{r, eval=FALSE}
+# WRITE HERE (explain USING your own words, otherwise the explanation will not be accepted)
+
+```
+
+* Repeat the experiment for different number of initial solutions, $k=10, 15, 20,50...$. Based on the new estimations which conclusions can you draw now?
+
+```{r, eval=FALSE}
+# WRITE HERE (explain USING your own words, otherwise the explanation will not be accepted)
+
+```
+
